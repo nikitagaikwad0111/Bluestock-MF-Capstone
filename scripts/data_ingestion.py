@@ -1,11 +1,29 @@
+"""
+data_ingestion.py
+-----------------
+Bluestock Fintech — Mutual Fund Analytics Capstone
+Day 1: Data Ingestion Script
+
+Description:
+    Loads all 10 raw CSV datasets from the data/raw/ directory.
+    Validates shape, data types, null values, and logs anomalies.
+
+Usage:
+    python scripts/data_ingestion.py
+
+Author: Nikita Gaikwad
+Date: June 2026
+"""
+
 import pandas as pd
 import os
 
-# Path to raw data folder
+
+# ─── Configuration ────────────────────────────────────────────────────────────
+
 RAW_PATH = "data/raw/"
 
-# All 10 CSV files
-csv_files = [
+CSV_FILES = [
     "01_fund_master.csv",
     "02_nav_history.csv",
     "03_aum_by_fund_house.csv",
@@ -18,30 +36,71 @@ csv_files = [
     "10_benchmark_indices.csv"
 ]
 
-anomalies = []
 
-for file in csv_files:
-    filepath = os.path.join(RAW_PATH, file)
+# ─── Functions ────────────────────────────────────────────────────────────────
+
+def load_and_validate(filepath: str) -> tuple[pd.DataFrame, list]:
+    """
+    Load a CSV file and validate for null values.
+
+    Args:
+        filepath (str): Full path to the CSV file.
+
+    Returns:
+        tuple: (DataFrame, list of anomaly messages)
+    """
+    anomalies = []
     df = pd.read_csv(filepath)
 
-    print(f"\n{'='*55}")
-    print(f"FILE: {file}")
-    print(f"Shape: {df.shape}")
-    print(f"\nData Types:\n{df.dtypes}")
-    print(f"\nFirst 3 Rows:\n{df.head(3)}")
-    
     nulls = df.isnull().sum()
     if nulls.any():
-        print(f"\n⚠️  Null Values Found:\n{nulls[nulls > 0]}")
-        anomalies.append(f"{file} has null values in: {list(nulls[nulls > 0].index)}")
-    else:
-        print(f"\n✅ No null values found")
+        anomaly_msg = f"{os.path.basename(filepath)} has null values in: {list(nulls[nulls > 0].index)}"
+        anomalies.append(anomaly_msg)
 
-print(f"\n{'='*55}")
-print("DATA QUALITY SUMMARY")
-print(f"{'='*55}")
-if anomalies:
-    for a in anomalies:
-        print(f"⚠️  {a}")
-else:
-    print("✅ All files loaded cleanly with no anomalies!")
+    return df, anomalies
+
+
+def run_ingestion() -> None:
+    """
+    Main ingestion function.
+    Loads all 10 CSV files, prints summary, and reports anomalies.
+    """
+    all_anomalies = []
+
+    for file in CSV_FILES:
+        filepath = os.path.join(RAW_PATH, file)
+
+        if not os.path.exists(filepath):
+            print(f"❌ File not found: {filepath}")
+            continue
+
+        df, anomalies = load_and_validate(filepath)
+        all_anomalies.extend(anomalies)
+
+        print(f"\n{'='*55}")
+        print(f"FILE: {file}")
+        print(f"Shape: {df.shape}")
+        print(f"Data Types:\n{df.dtypes}")
+        print(f"First 3 Rows:\n{df.head(3)}")
+
+        if anomalies:
+            for a in anomalies:
+                print(f"⚠️  {a}")
+        else:
+            print("✅ No null values found")
+
+    # ── Summary ──
+    print(f"\n{'='*55}")
+    print("DATA QUALITY SUMMARY")
+    print(f"{'='*55}")
+    if all_anomalies:
+        for a in all_anomalies:
+            print(f"⚠️  {a}")
+    else:
+        print("✅ All files loaded cleanly with no anomalies!")
+
+
+# ─── Entry Point ──────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    run_ingestion()
